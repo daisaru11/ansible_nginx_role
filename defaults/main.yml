@@ -1,0 +1,3 @@
+nginx_version: "nginx-1.6.1"
+nginx_src: '/usr/local/src'
+nginx_install_path: '/usr/local/nginx'

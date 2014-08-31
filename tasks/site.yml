@@ -1,0 +1,14 @@
+- name: be sure conf.d directory is exists
+  file:
+    path: "{{ nginx_install_path }}/{{ nginx_version }}/conf/conf.d"
+    state: directory
+  tags:
+    - nginx
+
+#- name: app nginx conf
+#  template: src=app.conf.j2 dest={{ nginx_install_path }}/{{ nginx_version }}/conf/conf.d/app.conf
+#  notify:
+#    - restart nginx
+#  tags:
+#    - nginx
+#

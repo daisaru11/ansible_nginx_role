@@ -1,0 +1,109 @@
+###
+#  INSTALL FROM SOURCE
+#
+- name: be sure nginx group exists
+  group:
+    gid: 113
+    name: nginx
+    state: present
+  tags:
+    - nginx
+
+- name: be sure nginx user exists
+  user:
+    name: nginx
+    uid: 109
+    group: nginx
+    home: /nonexistent
+    shell: /bin/false
+    state: present
+    system: yes
+  tags:
+    - nginx
+
+- name: be sure nginx build dependencies are installed
+  apt:
+    pkg: "{{item}}"
+    state: present
+  with_items:
+    - libpcre3
+    - libpcre3-dev
+    - libssl-dev
+  tags:
+    - nginx
+
+- name: be sure source is downloaded
+  get_url: url=http://nginx.org/download/{{ nginx_version }}.tar.gz dest={{ nginx_src }}
+  tags:
+    - nginx
+
+- name: be sure source is expanded
+  command: tar xvfz {{ nginx_version }}.tar.gz chdir={{ nginx_src }} creates={{ nginx_src }}/{{ nginx_version }}
+  tags:
+    - nginx
+
+- name: be sure headers_more_module is downloaded
+  get_url: 
+    url: "https://github.com/openresty/headers-more-nginx-module/archive/v0.25.tar.gz"
+    dest: "{{ nginx_src }}/nginx-headers-more-module-0.25.tar.gz"
+  tags:
+    - nginx
+
+- name: be sure headers_more_module is expanded
+  shell: >
+    tar xvfz {{ nginx_src }}/nginx-headers-more-module-0.25.tar.gz &&
+    mv {{ nginx_src }}/headers-more-nginx-module-0.25 {{ nginx_src }}/nginx_headers_more
+    chdir={{ nginx_src }}
+    creates={{ nginx_src }}/nginx_headers_more
+  tags:
+    - nginx
+
+- name: configure source
+  command: >
+    ./configure
+    --prefix={{ nginx_install_path }}/{{ nginx_version }}
+    --with-http_ssl_module
+    --with-http_realip_module
+    --add-module={{ nginx_src }}/nginx_headers_more
+    chdir={{ nginx_src }}/{{ nginx_version }}
+    creates={{ nginx_install_path }}/{{ nginx_version }}
+  tags:
+    - nginx
+
+- name: make
+  command: make chdir={{ nginx_src }}/{{ nginx_version }} creates={{ nginx_install_path }}/{{ nginx_version }}
+  tags:
+    - nginx
+
+- name: make install
+  command: make install chdir={{ nginx_src }}/{{ nginx_version }} creates={{ nginx_install_path }}/{{ nginx_version }}
+  tags:
+    - nginx
+
+- name: copy nginx.conf
+  template: src=nginx.conf.j2 dest={{ nginx_install_path }}/{{ nginx_version }}/conf/nginx.conf
+  tags:
+    - nginx
+
+- name: copy nginx for init.d
+  template: src=nginx_init.j2 dest=/etc/init.d/nginx mode=0755
+  notify:
+   - restart nginx
+  tags:
+    - nginx
+
+- name: be sure logdir is exists
+  file:
+    path: /var/log/nginx
+    group: nginx
+    owner: nginx
+    state: directory
+  tags:
+    - nginx
+
+- name: be sure nginx is running and enabled
+  service: name=nginx state=started enabled=yes                                                                                                                                              
+  tags:
+    - nginx
+
+
